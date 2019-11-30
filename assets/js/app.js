@@ -4,6 +4,7 @@ let today = moment([]).format("YYYY-MM-DD");
 let utc = -8;
 let timeZones = {
 	'HST': -10,
+	'AKST':-9,
 	'AST': -9,
 	'PST': -8,
 	'MST': -7,
