@@ -1,24 +1,7 @@
 let coordLocation = "Walnut Creek, California",
   today = moment([]).format("YYYY-MM-DD"),
   timeValues = {},
-  utc = -8,
-  timeZones = {
-    'HST': -10,
-    'AKST': -9,
-    'AST': -9,
-    'PST': -8,
-    'MST': -7,
-    'CST': -6,
-    'EST': -5,
-    'GMT': 0,
-    'MISSING': 0,
-    'CET': 1,
-    '+03': 3,
-    'MSK': 3,
-    'IST': 5.5,
-    'JST': 9,
-    'AEDT': 11,
-  };
+  timeZone = "America/Los_Angeles";
 
 $("#range").val(moment().diff(moment().startOf('year'), "days"));
 
@@ -46,10 +29,10 @@ const getCoords = function (city = coordLocation, date = today) {
       let {
         lat,
         lon,
-        tzs,
+        tz,
         name
       } = response.Results[0]
-      utc = timeZones[tzs];
+      timeZone = tz;
       coordLocation = name;
       init(lat, lon, date);
       $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`)
@@ -68,7 +51,8 @@ const init = function (lat, lng, date) {
   }).done(function (response) {
     let localResults = response.results
     Object.keys(localResults).forEach(a => {
-      localResults[a] = moment(`${date} ${localResults[a]}`).add(utc, 'hours').format('hh:mm a')
+      console.log(moment.tz(timeZone).format('Z'))
+      localResults[a] = moment.tz(`${date} ${localResults[a]}`, timeZone).format('hh:mm a')
     });
 
     localResults['midnight'] = '00:00:00';
