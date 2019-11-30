@@ -125,7 +125,6 @@ const sunTime = d3.scale.ordinal()
 	.domain(["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"])
 	.range(['#6b486b', '#7b6888', '#8a89a6', '#98abc5', '#a3bfe7', '#ff8c00', '#d0743c', '#a05d56', '#7b6888', '#6b486b']);
 
-// let highlight = '#98fbc5'
 const suntimeData = () => {
 	const labels = sunTime.domain();
 	return labels.map(function (label, idx) {
@@ -211,7 +210,6 @@ function change(data) {
 	polyline.exit().remove();
 };
 
-// $("#range").val() = 365 - moment().diff(moment().startOf('year'), "days")
 $("#range").on("change", function () {
 	let rangeNum = $("#range").val()
 	let rangeDate = moment().startOf("year").add(rangeNum, "days");
