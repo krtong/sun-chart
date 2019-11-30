@@ -1,138 +1,130 @@
 let coordLocation = "Walnut Creek, California",
-  today = moment([]).format("YYYY-MM-DD"),
+  today = moment().format("YYYY-MM-DD"),
   timeValues = {},
-  timeZone = "America/Los_Angeles";
+  timeZone = "America/Los_Angeles",
+  tempresults;
 
 $("#range").val(moment().diff(moment().startOf('year'), "days"));
+  
+const updateDateTimeLoc = (date = moment(today).format("MMMM D, YYYY")) => $("#range-label").html( `<form>
+                                                                                                      <div class="form-row row">
+                                                                                                        ${date} &nbsp
+                                                                                                        <span id="clock-location"></span>
+                                                                                                        <span id="location-search">&nbsp
+                                                                                                          (<a id="change-location" href="#">${coordLocation}</a>)
+                                                                                                        </span>
+                                                                                                      </div>
+                                                                                                    </form>`);
+setInterval(function () {$("#clock-location").text(` ${moment().format("hh:mm:ss a")} `)}, 1000);
 
-const updateDateTimeLoc = (date = moment(today).format("MMMM D, YYYY")) => $("#range-label").html(`<form><div class="form-row row">${date} &nbsp <span id="clock-location"></span><span id="location-search">&nbsp(<a id="change-location" href="#">${coordLocation}</a>)</span></div></</form>`);
-setInterval(function () {
-  $("#clock-location").text(` ${moment().format("hh:mm:ss a")} `)
-}, 1000);
-
-
-
+//get longitude and latitude based on city name (if anyone realizes you can search diff cities)
 const getCoords = function (city = coordLocation, date = today) {
-
-  $.ajax({
+  coordLocation = city;
+  $.get({
     "async": true,
     "crossDomain": true,
     "url": `https://devru-latitude-longitude-find-v1.p.rapidapi.com/latlon.php?location=${city}`,
-    "method": "GET",
     "headers": {
       "x-rapidapi-host": "devru-latitude-longitude-find-v1.p.rapidapi.com",
       "x-rapidapi-key": "6d3c1feb20msh822810202791af6p1ebb53jsn5d19af241004"
     }
   }).done(function (response) {
-    console.log(response.Results)
-    if (response.Results[0]) {
-      let {
-        lat,
-        lon,
-        tz,
-        name
-      } = response.Results[0]
-      timeZone = tz;
-      coordLocation = name;
-      init(lat, lon, date);
-      $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`)
-    } else {
-      init(null, null, date);
-    }
-  });
-};
+    if (response.Results.length === 0) $("#location-search").html(`(<a id="change-location" href="#">Location not found.</a>)`);
+    for (let i = 0; i < response.Results.length; i++) {
+      if (response.Results[i].tz !== "MISSING") {
+        let {lat, lon, tz, name} = response.Results[i];
+        [timeZone, coordLocation] = [tz, name];
 
-const init = function (lat, lng, date) {
-  let sunArr = Array(97).fill(0);
-  let times = {};
-  const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
+        $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`)
+        getSunChartData(lat, lon, date);
+        return;
+      };
+    };
+  });
+}
+
+//get sun times based on lat long and date. 
+const getSunChartData = function (lat, lng, date) {
   $.get({
-    url
+    url: `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
   }).done(function (response) {
-    let localResults = response.results
+    const str = (time) => `${date} ${time}`;
+    const localResults = response.results;
+
+    // response.Results are UTC+0. Convert times to UTC+-Whateveritssupposedtobe.
     Object.keys(localResults).forEach(a => {
-      console.log(moment.tz(timeZone).format('Z'))
-      localResults[a] = moment.tz(`${date} ${localResults[a]}`, timeZone).format('hh:mm a')
+      localResults[a] = moment.tz(str(localResults[a]), timeZone);
     });
 
-    localResults['midnight'] = '00:00:00';
-    localResults['tomorrow'] = '24:00:00';
+    //Finish off the set, unless you want to flip the chart and use solar array, but i like midnight at the top like a 24h clock.
+    localResults['midnight'] = moment(str('00:00:00'));
+    localResults['tomorrow'] = moment(str('24:00:00'));
 
-    const newMoment = (key, time, endingTime) => {
-      let obj = {};
-      obj['start'] = moment(`${date} ${localResults[time]}`);;
-      obj['end'] = moment(`${date} ${localResults[endingTime]}`);
-      obj['hours'] = obj.end.diff(obj.start, "hours");
-      obj['minutes'] = obj.end.diff(obj.start, "minutes");
-      obj.start = obj.start.format("hh:mm:ss a");
-      obj.end = obj.end.format("hh:mm:ss a");
-      timeValues[key] = obj;
+    //sort of overkill. I just need minutes between start/end so I can make the 1440 minute pie chart, but maybe I'll display times in an overlay.
+    const newMoment = (key, start, stop) => {
+      const tempObj = {
+        minutes: Math.abs(stop.diff(start, "minutes")) % 1440,
+        begin: start.format("hh:mm:ss a"),
+        end: stop.format("hh:mm:ss a"),
+      };
+      timeValues[key] = tempObj;
     };
 
-    newMoment('After Midnight', 'midnight', 'astronomical_twilight_begin')
-    newMoment('Astronomical Dawn', 'astronomical_twilight_begin', 'nautical_twilight_begin');
-    newMoment('Nautical Dawn', 'nautical_twilight_begin', 'civil_twilight_begin');
-    newMoment('Civil Dawn', 'civil_twilight_begin', 'sunrise')
-    newMoment('Day', 'sunrise', 'sunset')
-    newMoment('Civil Dusk', 'sunset', 'civil_twilight_end')
-    newMoment('Nautical Dusk', 'civil_twilight_end', 'nautical_twilight_end')
-    newMoment('Astronomical Dusk', 'nautical_twilight_end', 'astronomical_twilight_end')
-    newMoment('Before Midnight', 'astronomical_twilight_end', 'tomorrow')
+    //Get start/stop/minutes for each slice.
+    ["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"]
+    .forEach((a, i) => {
+      let arr = ['midnight', 'astronomical_twilight_begin', 'nautical_twilight_begin', 'civil_twilight_begin', 'sunrise', 'sunset', 'civil_twilight_end', 'nautical_twilight_end', 'astronomical_twilight_end', 'tomorrow'];
+      newMoment(a, localResults[arr[i]], localResults[arr[i + 1]])
+    });
+    console.log(timeValues)
     change(suntimeData());
   });
 };
 
-const svg = d3.select("body").append("svg").append("g")
-svg.append("g").attr("class", "slices");
-svg.append("g").attr("class", "labels");
-svg.append("g").attr("class", "lines");
+//create d3 svg
+const svg = d3.select("body").append("svg").append("g");
+const svgAppend = (a) => svg.append("g").attr("class", a);
+['slices', 'labels', 'lines'].forEach(a => svgAppend(a));
 
-const width = 960,
-  height = 450,
+// svg size
+const [width, height] = [950, 450],
   radius = Math.min(width, height) / 2;
 
+svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+  
+  
 const pie = d3.layout.pie()
   .sort(null)
   .value(function (d) {
     return d.value;
   });
+  
+const key = (d) => d.data.label;
 
-const sunArc = d3.svg.arc()
-  .outerRadius(radius * 0.666)
-  .innerRadius(radius * 0.333);
+//sun chart size
+const chartRadius = (a, b) => d3.svg.arc().outerRadius(radius * a).innerRadius(radius * b);
+const sunArc = chartRadius(0.666, 0.333);
+const labelArc = chartRadius(0.8, 1);
 
-const outerArc = d3.svg.arc()
-  .innerRadius(radius * 1)
-  .outerRadius(radius * 0.8);
 
-svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-
-const key = function (d) {
-  return d.data.label;
-};
-
+//labels and slice colors for sun chart
 const sunTime = d3.scale.ordinal()
   .domain(["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"])
   .range(['#6b486b', '#7b6888', '#8a89a6', '#98abc5', '#a3bfe7', '#ff8c00', '#d0743c', '#a05d56', '#7b6888', '#6b486b']);
 
-const suntimeData = () => {
-  const labels = sunTime.domain();
-  return labels.map(function (label, idx) {
-    return {
-      label,
-      value: timeValues[label].minutes
-    }
-  });
-};
+//populate chart data
+const suntimeData = () => sunTime.domain().map(label => {
+  return {label, value: timeValues[label].minutes}
+});
 
-function change(data) {
-  /* ------- PIE SLICES -------*/
+//transition animation for pie chart changes
+const change = function(data) {
+  //pie slices
   const slice = svg.select(".slices").selectAll("path.slice").data(pie(data), key);
   slice.enter().insert("path")
     .style("fill", function (d) {
       return sunTime(d.data.label);
-    })
-    .attr("class", "slice");
+    }).attr("class", "slice");
 
   slice.transition().duration(1000)
     .attrTween("d", function (d) {
@@ -146,7 +138,7 @@ function change(data) {
 
   slice.exit().remove();
 
-  /* ------- TEXT LABELS -------*/
+ //text labels
   const text = svg.select(".labels").selectAll("text").data(pie(data), key);
 
   text.enter().append("text").attr("dy", ".35em")
@@ -154,9 +146,7 @@ function change(data) {
       return d.data.label;
     });
 
-  function midAngle(d) {
-    return d.startAngle + (d.endAngle - d.startAngle) / 20;
-  };
+  const midAngle = (d) => d.startAngle + (d.endAngle - d.startAngle) / 20;
 
   text.transition().duration(1000)
     .attrTween("transform", function (d) {
@@ -165,7 +155,7 @@ function change(data) {
       this._current = interpolate(0);
       return function (t) {
         const d2 = interpolate(t);
-        const pos = outerArc.centroid(d2);
+        const pos = labelArc.centroid(d2);
         pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
         return "translate(" + pos + ")";
       };
@@ -182,7 +172,7 @@ function change(data) {
 
   text.exit().remove();
 
-  /* ------- SLICE TO TEXT POLYLINES -------*/
+  //polylines between slices and text
   const polyline = svg.select(".lines").selectAll("polyline").data(pie(data), key);
   polyline.enter().append("polyline");
   polyline.transition().duration(1000)
@@ -192,36 +182,38 @@ function change(data) {
       this._current = interpolate(0);
       return function (t) {
         const d2 = interpolate(t);
-        const pos = outerArc.centroid(d2);
+        const pos = labelArc.centroid(d2);
         pos[0] = radius * .95 * (midAngle(d2) < Math.PI ? 1 : -1);
-        return [sunArc.centroid(d2), outerArc.centroid(d2), pos];
+        return [sunArc.centroid(d2), labelArc.centroid(d2), pos];
       };
     });
   polyline.exit().remove();
 };
 
-
+//initialize
 updateDateTimeLoc();
 $("#clock-location").text(`${moment().format(" hh:mm:ss a")}`);
 getCoords();
 
-
+//change date
 $("#range").on("change", function () {
-  let rangeNum = $("#range").val();
-  let rangeDate = moment().startOf("year").add(rangeNum, "days");
+  const rangeNum = $("#range").val();
+  const rangeDate = moment().startOf("year").add(rangeNum, "days");
   today = rangeDate.format("YYYY-MM-DD");
   updateDateTimeLoc(rangeDate.format("MMMM D, YYYY"));
   getCoords(undefined, rangeDate.format("YYYY-MM-DD"));
 });
 
+//open location change form
 $(document).on("click", "#change-location", function () {
-  let html = `(<input id="new-coord" class="form-control  type="text" value="${coordLocation}" style="display: inline">)<button id="submit-button" type="submit" class="btn btn-primary" style="display:none;"></button>`;
-  $("#location-search").html(html);
+  $("#location-search").html(`(<input id="new-coord" class="form-control  type="text" value="${coordLocation}" style="display: inline">)
+                              <button id="submit-button" type="submit" class="btn btn-primary" style="display:none;"></button>`);
 });
 
+//change location
 $(document).on("click", "#submit-button", function () {
   event.preventDefault();
-  coordLocation = $("#new-coord").val();
-  $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`);
-  getCoords();
+  const newCoord = $("#new-coord").val()
+  $("#location-search").html(`(<a id="change-location" href="#">${newCoord}</a>)`);
+  getCoords(newCoord);
 });
