@@ -1,6 +1,6 @@
 # sun-chart
 This project uses free-to-use API's only. Huge thanks to:
-https://devru-latitude-longitude-find-v1.p.rapidapi.com/ &
+https://devru-latitude-longitude-find-v1.com/ &
 https://api.sunrise-sunset.org/
 
 This component only usues bootstrap, momentjs, jquery, and D3 (although D3 doesn't always play well with bootstrap, which is why its script tag is below app.js).
