@@ -22,29 +22,36 @@ setInterval(function () {$("#clock-location").text(` ${moment().format("hh:mm:ss
 //get longitude and latitude based on city name (if anyone realizes you can search diff cities)
 const getCoords = function (city = coordLocation, date = today) {
   coordLocation = city;
-  $.get({
-    "async": true,
-    "crossDomain": true,
-    "url": `https://devru-latitude-longitude-find-v1.p.rapidapi.com/latlon.php?location=${city}`,
-    "headers": {
-      "x-rapidapi-host": "devru-latitude-longitude-find-v1.p.rapidapi.com",
-      "x-rapidapi-key": "79cdd77d2emsh1fcd47944c92478p11ac47jsn27dbe9aa5a72"
-    }
-  }).done(function (response) {
-    
-    if (response.Results.length === 0) $("#location-search").html(`(<a id="change-location" href="#">Location not found.</a>)`);
-    for (let i = 0; i < response.Results.length; i++) {
-      if (response.Results[i].tz !== "MISSING") {
-        let {lat, lon, tz, name} = response.Results[i];
-        [timeZone, coordLocation] = [tz, name];
+  $.ajax({
+        url: 'https://api.opencagedata.com/geocode/v1/json',
+        method: 'GET',
+        data: {
+          'key': '2f65325b283549d890ef472f0848a337',
+          'q': city,
+          'no_annotations': 0
+          // see other optional params:
+          // https://opencagedata.com/api#forward-opt
+        },
+        dataType: 'json',
+        statusCode: {
+          200: function(response){  // success
+            console.log(response);
+            let {lat, lng} = response.results[0].geometry;
+            getSunChartData(lat, lng, date)
+            coordLocation = response.results[0].formatted;
+            // coordLocation = coordLocation.slice(0, coordLocation.lastIndexOf(','));
+            $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`);
 
-        $("#location-search").html(`(<a id="change-location" href="#">${coordLocation}</a>)`)
-        getSunChartData(lat, lon, date);
-        return;
-      };
-    };
-  });
-}
+          },
+          402: function(){
+            console.log('hit free-trial daily limit');
+            console.log('become a customer: https://opencagedata.com/pricing');
+          }
+          // other possible response codes:
+          // https://opencagedata.com/api#codes
+        }
+      });
+    }
 
 //get sun times based on lat long and date. 
 const getSunChartData = function (lat, lng, date) {
@@ -52,12 +59,8 @@ const getSunChartData = function (lat, lng, date) {
   Sometimes there is no sunset, ciivl dusk or night time 
   eg: Anchorage, AK during summer
   so you cant hardcode midnight as the start/end of nighttime*/
-
-    $.get({
-    url: `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
-  }).done(function (response) {
-    console.log("response", response);
-    
+let url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
+    $.get({url}).done(function (response) {    
     const str = (t, d = date) => `${d} ${t}`;
     let localResults = response.results;
 
@@ -89,8 +92,6 @@ const getSunChartData = function (lat, lng, date) {
       let arr = ['midnight', 'astronomical_twilight_begin', 'nautical_twilight_begin', 'civil_twilight_begin', 'sunrise', 'sunset', 'civil_twilight_end', 'nautical_twilight_end', 'astronomical_twilight_end', 'tomorrow'];
       newMoment(a, localResults[arr[i]], localResults[arr[i + 1]])
     });
-    console.log("minuteCount", minuteCount)
-    console.log("timeValues", timeValues)
     change(suntimeData());
   });
 
