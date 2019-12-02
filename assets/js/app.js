@@ -95,12 +95,6 @@ let url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${dat
     change(suntimeData());
   });
 
-  $.get({
-    url: `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
-  }).done(function (response) {
-    console.log("response before updated", response);
-  });
-};
 //labels and slice colors for sun chart
 const sunTime = d3.scale.ordinal()
   .domain(["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"])
