@@ -65,35 +65,35 @@ const getSunChartData = function (lat, lng, date) {
     Object.keys(localResults).forEach(a => localResults[a] = moment.tz(str(localResults[a]), timeZone).format('hh:mm a'));
 
     //Finish off the set, unless you want to flip the chart and use solar array, but i like midnight at the top like a 24h clock.
-    localResults['midnight'] = moment(str('00:00')).format('hh:mm a');
-    localResults['tomorrow'] = moment(str('23:59')).format('hh:mm a');
-    let minuteCount = {
-      totalMinutes : 0,
-      sliceMinutes: {}
-    }
-    let newDay = moment()
-    //sort of overkill. I just need minutes between start/end so I can make the 1440 minute pie chart, but maybe I'll display times in an overlay.
-    const newMoment = (key, start, stop) => {
-      [start, stop] = [moment(str(start)), moment(str(stop))]
-      let minutes = stop.diff(start, "minutes");
-      if (key === 'Before Midnight') minutes = stop.add(1, 'minute').diff(start, "minutes")
-      minuteCount.totalMinutes += minutes;
-      minuteCount.sliceMinutes[key] = minutes;
-      const tempObj = {minutes, start, stop };
-      timeValues[key] = tempObj;
-    };
+    // localResults['midnight'] = moment(str('00:00')).format('hh:mm a');
+    // localResults['tomorrow'] = moment(str('23:59')).format('hh:mm a');
+    // let minuteCount = {
+    //   totalMinutes : 0,
+    //   sliceMinutes: {}
+    // }
+    // let newDay = moment()
+    // //sort of overkill. I just need minutes between start/end so I can make the 1440 minute pie chart, but maybe I'll display times in an overlay.
+    // const newMoment = (key, start, stop) => {
+    //   [start, stop] = [moment(str(start)), moment(str(stop))]
+    //   let minutes = stop.diff(start, "minutes");
+    //   if (key === 'Before Midnight') minutes = stop.add(1, 'minute').diff(start, "minutes")
+    //   // minutes = minutes > 0 ? minutes : 0;
+    //   minuteCount.totalMinutes += minutes;
+    //   minuteCount.sliceMinutes[key] = minutes;
+    //   const tempObj = {minutes, start, stop };
+    //   timeValues[key] = tempObj;
+    // };
 
-    //Get start/stop/minutes for each slice.
-    ["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"]
-    .forEach((a, i) => {
-      let arr = ['midnight', 'astronomical_twilight_begin', 'nautical_twilight_begin', 'civil_twilight_begin', 'sunrise', 'sunset', 'civil_twilight_end', 'nautical_twilight_end', 'astronomical_twilight_end', 'tomorrow'];
-      newMoment(a, localResults[arr[i]], localResults[arr[i + 1]])
-    });
-    console.log("minuteCount", minuteCount)
-    console.log("timeValues", timeValues)
+    // //Get start/stop/minutes for each slice.
+    // ["After Midnight", "Astronomical Dawn", "Nautical Dawn", "Civil Dawn", "Day", "Civil Dusk", "Nautical Dusk", "Astronomical Dusk", "Before Midnight"]
+    // .forEach((a, i) => {
+    //   let arr = ['midnight', 'astronomical_twilight_begin', 'nautical_twilight_begin', 'civil_twilight_begin', 'sunrise', 'sunset', 'civil_twilight_end', 'nautical_twilight_end', 'astronomical_twilight_end', 'tomorrow'];
+    //   newMoment(a, localResults[arr[i]], localResults[arr[i + 1]])
+    // });
+    // console.log("minuteCount", minuteCount)
+    // console.log("timeValues", timeValues)
     change(suntimeData());
   });
-
   $.get({
     url: `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}0&date=${date}`
   }).done(function (response) {
