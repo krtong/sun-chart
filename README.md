@@ -1,7 +1,7 @@
 # sun-chart
 This project uses free-to-use API's only. Huge thanks to:
-https://rapidapi.com/dev132/api/city-geo-location-lookup &
-https://api.sunrise-sunset.org/ .
+https://opencagedata.com/ &
+https://sunrise-sunset.org/
 also for his beautiful colorful donut:
 https://observablehq.com/@aaronkyle/learning-a-donut-chart-from-d3-js
 
