@@ -1,9 +1,9 @@
 # sun-chart
 This project uses free-to-use API's only. Huge thanks to:
+
 https://opencagedata.com/ &
+
 https://sunrise-sunset.org/
-also for his beautiful colorful donut:
-https://observablehq.com/@aaronkyle/learning-a-donut-chart-from-d3-js
 
 This component only usues bootstrap, momentjs, jquery, and D3 (although D3 doesn't always play well with bootstrap, which is why its script tag is below app.js).
 No server side. Very vanilla. No design pattern yet, although any more complexity may require it to handle multiple d3 components.
